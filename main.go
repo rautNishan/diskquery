@@ -6,6 +6,8 @@ import (
 	"log"
 	"os"
 	"strconv"
+
+	"github.com/rautNishan/diskquery.git/tree"
 )
 
 type indexValue struct {
@@ -14,10 +16,13 @@ type indexValue struct {
 }
 
 func main() {
-	index := make(map[int]indexValue)
-	PopulateIndex(&index, "./data.txt")
-	data := findByIndex(5000, &index, "./data.txt")
-	fmt.Println("This is data: ", string(data))
+	// index := make(map[int]indexValue)
+	// PopulateIndex(&index, "./data.txt")
+	// data := findByIndex(5000, &index, "./data.txt")
+	// fmt.Println("This is data: ", string(data))
+	bt := tree.BinaryTree{}
+	bt.Populate()
+	bt.PrettyPrint()
 }
 
 func PopulateIndex(index *map[int]indexValue, path string) {
