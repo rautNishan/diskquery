@@ -20,9 +20,22 @@ func main() {
 	// PopulateIndex(&index, "./data.txt")
 	// data := findByIndex(5000, &index, "./data.txt")
 	// fmt.Println("This is data: ", string(data))
-	bt := tree.BinaryTree{}
-	bt.Populate()
-	bt.PrettyPrint()
+	// bt := tree.BinaryTree{}
+	// bt.Populate()
+	// bt.PrettyPrint()
+
+	bst := tree.BinarySearchTree{}
+
+	bst.Insert(10)
+	bst.Insert(20)
+	bst.Insert(5)
+	bst.Insert(100)
+	bst.Insert(40)
+	bst.Insert(25)
+	bst.Insert(15)
+	fmt.Println(bst.IsEmpty())
+	bst.PrettyPrint()
+	fmt.Println("Is tree Balanced:", bst.IsBalancedTree())
 }
 
 func PopulateIndex(index *map[int]indexValue, path string) {
