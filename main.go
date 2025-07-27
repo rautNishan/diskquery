@@ -24,18 +24,15 @@ func main() {
 	// bt.Populate()
 	// bt.PrettyPrint()
 
-	bst := tree.BinarySearchTree{}
+	avl := tree.AVLTree{}
 
-	bst.Insert(10)
-	bst.Insert(20)
-	bst.Insert(5)
-	bst.Insert(100)
-	bst.Insert(40)
-	bst.Insert(25)
-	bst.Insert(15)
-	fmt.Println(bst.IsEmpty())
-	bst.PrettyPrint()
-	fmt.Println("Is tree Balanced:", bst.IsBalancedTree())
+	for i := 0; i < 10; i++ {
+		avl.Insert(i)
+	}
+	avl.PrettyPrint()
+	fmt.Println(avl.GetHeight())
+	fmt.Println(avl.IsBalanced())
+
 }
 
 func PopulateIndex(index *map[int]indexValue, path string) {
@@ -90,5 +87,6 @@ func findByIndex(i int, index *map[int]indexValue, path string) []byte {
 		log.Fatal("Error while reading file in find: ", err)
 	}
 	fmt.Println("This is n: ", n)
+
 	return buffer
 }
