@@ -7,7 +7,7 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/rautNishan/diskquery.git/tree"
+	"github.com/rautNishan/diskquery/tree"
 )
 
 type indexValue struct {
@@ -15,7 +15,7 @@ type indexValue struct {
 	length int
 }
 
-func test() {
+func Test() {
 	// index := make(map[int]indexValue)
 	// PopulateIndex(&index, "./data.txt")
 	// data := findByIndex(5000, &index, "./data.txt")
@@ -73,7 +73,7 @@ func PopulateIndex(index *map[int]indexValue, path string) {
 	}
 }
 
-func findByIndex(i int, index *map[int]indexValue, path string) []byte {
+func FindByIndex(i int, index *map[int]indexValue, path string) []byte {
 	file, err := os.Open(path)
 	if err != nil {
 		log.Fatal("Error while Opening file in find: ", err)

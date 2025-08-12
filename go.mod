@@ -1,7 +1,3 @@
-module github.com/rautNishan/diskquery.git
+module github.com/rautNishan/diskquery
 
-go 1.24.1
-
-replace github.com/rautNishan/diskquery.git/tree => ./tree
-
-require github.com/rautNishan/diskquery.git/tree v0.0.0-00010101000000-000000000000
+go 1.22.2
