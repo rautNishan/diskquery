@@ -129,18 +129,23 @@ func (connection *Connection) messageLoop() {
 		if err != nil {
 			if err == io.EOF {
 				log.Printf("Client disconnected")
+				fmt.Println()
 				return
 			}
-			log.Printf("Error reading command: %v", err)
 			return
 		}
-		fmt.Println(firstChar == Msg_Query)
-		fmt.Printf("This is query: %v", string(inputMessage.data))
-		fmt.Println()
-		fmt.Printf("This is pos: %d", inputMessage.pos)
+		switch firstChar {
+		case Msg_Query:
+			query_string := connection.getMessageString(&inputMessage)
+			fmt.Printf("String query: %v", query_string)
+		}
+
 	}
 }
 
+/*
+Incoming messages are in from of binary encoding
+*/
 func (connection *Connection) readCommand(inputMessage *InputMessage) (int, error) {
 	//Read the first byte to know the message type (Q,P and so on)
 	msgType, err := connection.reader.ReadByte()
@@ -151,18 +156,15 @@ func (connection *Connection) readCommand(inputMessage *InputMessage) (int, erro
 		return 0, err
 	}
 
-	//Read the message lenght From where actual query start
+	//Read the message lenght From where actual query start (Reads exactly 4 bytes)
 	var length uint32
+	//This will fill my length variable
 	if err := binary.Read(connection.reader, binary.BigEndian, &length); err != nil {
 		return 0, err
 	}
 
-	fmt.Println()
-
 	//Length includes the 4 byte length field itself
 	payloadSize := length - 4
-
-	fmt.Println()
 
 	if payloadSize > 0 {
 		data := make([]byte, payloadSize)
@@ -176,4 +178,19 @@ func (connection *Connection) readCommand(inputMessage *InputMessage) (int, erro
 	inputMessage.msgType = msgType
 	inputMessage.pos = 0
 	return int(msgType), nil
+}
+
+func (connection *Connection) getMessageString(inputMessage *InputMessage) string {
+	start := inputMessage.pos
+	fmt.Println()
+	for inputMessage.pos < len(inputMessage.data) && inputMessage.data[inputMessage.pos] != 0 {
+		inputMessage.pos++
+	}
+
+	result := string(inputMessage.data[start:inputMessage.pos])
+	if inputMessage.pos < len(inputMessage.data) {
+		inputMessage.pos++ //Skip null terminator
+	}
+
+	return result
 }
