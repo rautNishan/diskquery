@@ -2,6 +2,7 @@ package connection
 
 import (
 	"bufio"
+	"context"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -28,15 +29,15 @@ type InputMessage struct {
 	pos     int
 }
 type Connection struct {
-	conn       net.Conn
-	remoteAddr net.Addr
-	localAddr  net.Addr
-	sendBuffer []byte
-	recvBuffer []byte
-	reader     *bufio.Reader
-	writer     *bufio.Writer
-	// ctx          context.Context
-	// cancel       context.CancelFunc
+	conn         net.Conn
+	remoteAddr   net.Addr
+	localAddr    net.Addr
+	sendBuffer   []byte
+	recvBuffer   []byte
+	reader       *bufio.Reader
+	writer       *bufio.Writer
+	ctx          context.Context
+	cancel       context.CancelFunc
 	tcpNoDelay   bool
 	tcpKeepAlive bool
 	wg           sync.WaitGroup
@@ -65,7 +66,8 @@ func HandelConnection(conn net.Conn) {
 }
 
 func initConnection(conn net.Conn) *Connection {
-
+	//Setup context for each thread that is being spawned
+	//Initialize it
 	port := &Connection{
 		conn:       conn,
 		remoteAddr: conn.RemoteAddr(),
@@ -123,6 +125,7 @@ func (connection *Connection) messageLoop() {
 		TODO
 		1) Handle startup
 		2) Send Ready for query (For client)
+		3) Handle query cancellation
 	*/
 	for {
 		firstChar, err := connection.readCommand(&inputMessage)
@@ -137,7 +140,8 @@ func (connection *Connection) messageLoop() {
 		switch firstChar {
 		case Msg_Query:
 			query_string := connection.getMessageString(&inputMessage)
-			fmt.Printf("String query: %v", query_string)
+			fmt.Printf("This is exact query: %v", query_string)
+			fmt.Println()
 		}
 
 	}

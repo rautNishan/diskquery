@@ -26,6 +26,5 @@ func main() {
 		buf.Write(payload)
 	}
 	conn.Write(buf.Bytes())
-	for {
-	}
+
 }
