@@ -140,8 +140,7 @@ func (connection *Connection) messageLoop() {
 		switch firstChar {
 		case Msg_Query:
 			query_string := connection.getMessageString(&inputMessage)
-			fmt.Printf("This is exact query: %v", query_string)
-			fmt.Println()
+			connection.execSimpleQuery(query_string)
 		}
 
 	}
@@ -197,4 +196,9 @@ func (connection *Connection) getMessageString(inputMessage *InputMessage) strin
 	}
 
 	return result
+}
+
+func (connection *Connection) execSimpleQuery(queryString string) {
+	fmt.Printf("Executing query: %v", queryString)
+	fmt.Println()
 }
