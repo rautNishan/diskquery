@@ -11,6 +11,8 @@ import (
 	"os"
 	"sync"
 	"time"
+
+	"github.com/rautNishan/diskquery/parser"
 )
 
 const SEND_BUFFER_SIZE = 8192
@@ -200,5 +202,5 @@ func (connection *Connection) getMessageString(inputMessage *InputMessage) strin
 
 func (connection *Connection) execSimpleQuery(queryString string) {
 	fmt.Printf("Executing query: %v", queryString)
-	fmt.Println()
+	parser.RawParse(queryString, parser.RAW_PARSE_DEFAULT)
 }
