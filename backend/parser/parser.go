@@ -19,5 +19,6 @@ func RawParse(query string, parseMode RawParseMode) {
 	for _, token := range tokens {
 		fmt.Printf("Token raw type: %d\n", token.Type)
 		fmt.Printf("TokeyType: %s, Value: %s\n", keywordsReverse[token.Type], token.Value)
+		fmt.Printf("Token details: %v\n", token)
 	}
 }

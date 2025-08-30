@@ -11,7 +11,7 @@ func main() {
 	fmt.Println("Running client")
 	conn, _ := net.Dial("tcp", "localhost:3000")
 
-	queries := []string{"SELECT * FROM users"}
+	queries := []string{"SELECT *"}
 	buf := bytes.NewBuffer([]byte{})
 
 	for _, q := range queries {

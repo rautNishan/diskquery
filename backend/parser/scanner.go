@@ -8,6 +8,7 @@ import (
 	"unicode/utf8"
 )
 
+// NOTE: We are doing location -1 because in readChar we are alwasy incremeanting it
 type TokenType int
 
 const (
@@ -311,6 +312,7 @@ func (s *Scanner) readChar() {
 	// Check if we have reached the end of the query string
 	if s.position >= len(s.query) {
 		// End of input: mark current and peek as 0 (EOF)
+		//This will come handy while reunning NextToken()
 		s.current = 0
 		s.peek = 0
 	} else {
@@ -328,7 +330,6 @@ func (s *Scanner) readChar() {
 		}
 
 		// Special handling for the very first character in the query
-
 		if s.position == 0 {
 			// Decode the rune at the current position
 			r, _ := utf8.DecodeRuneInString(s.query[s.position:])
@@ -336,7 +337,6 @@ func (s *Scanner) readChar() {
 		}
 
 		r, size := utf8.DecodeRuneInString(s.query[s.position:])
-		fmt.Printf("Size: %d\n", size)
 		s.current = r
 		s.position += size
 		s.location++
@@ -361,7 +361,6 @@ func (s *Scanner) scanIdentifier() Token {
 
 	builder.WriteRune(s.current)
 	s.readChar()
-
 	//Subsequent characters (letter ,digits, underscore)
 	for unicode.IsLetter(s.current) || unicode.IsDigit(s.current) || s.current == '_' {
 		builder.WriteRune(s.current)
@@ -587,9 +586,12 @@ func (s *Scanner) scanComment() Token {
 func (s *Scanner) NextToken() Token {
 	s.skipWhitespace()
 
+	//Because we have already updated the current while initializeing scanner
+	//So if there is noting to read END OF FILE (EOF)
 	if s.current == 0 {
 		return Token{Type: TOKEN_EOF, Location: s.location}
 	}
+
 	location := s.location - 1
 
 	switch {
