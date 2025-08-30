@@ -2,13 +2,16 @@ package parser
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
+	"unicode"
 	"unicode/utf8"
 )
 
 type TokenType int
 
 const (
-	TOKEN_EFOF TokenType = iota
+	TOKEN_EOF TokenType = iota
 	TOKEN_ERROR
 	TOKEN_SCONST // String constant
 	TOKEN_ICONST // Integer constant
@@ -146,6 +149,79 @@ type Scanner struct {
 	state    ScannerState
 }
 
+var keywordsReverse = map[TokenType]string{
+	TOKEN_SELECT:      "SELECT",
+	TOKEN_FROM:        "FROM",
+	TOKEN_WHERE:       "WHERE",
+	TOKEN_INSERT:      "INSERT",
+	TOKEN_INTO:        "INTO",
+	TOKEN_VALUES:      "VALUES",
+	TOKEN_UPDATE:      "UPDATE",
+	TOKEN_SET:         "SET",
+	TOKEN_DELETE:      "DELETE",
+	TOKEN_CREATE:      "CREATE",
+	TOKEN_TABLE:       "TABLE",
+	TOKEN_DROP:        "DROP",
+	TOKEN_INDEX:       "INDEX",
+	TOKEN_VIEW:        "VIEW",
+	TOKEN_DATABASE:    "DATABASE",
+	TOKEN_SCHEMA:      "SCHEMA",
+	TOKEN_FUNCTION:    "FUNCTION",
+	TOKEN_PROCEDURE:   "PROCEDURE",
+	TOKEN_TRIGGER:     "TRIGGER",
+	TOKEN_BEGIN:       "BEGIN",
+	TOKEN_END:         "END",
+	TOKEN_COMMIT:      "COMMIT",
+	TOKEN_ROLLBACK:    "ROLLBACK",
+	TOKEN_TRANSACTION: "TRANSACTION",
+	TOKEN_AS:          "AS",
+	TOKEN_ON:          "ON",
+	TOKEN_INNER:       "INNER",
+	TOKEN_LEFT:        "LEFT",
+	TOKEN_RIGHT:       "RIGHT",
+	TOKEN_FULL:        "FULL",
+	TOKEN_OUTER:       "OUTER",
+	TOKEN_JOIN:        "JOIN",
+	TOKEN_UNION:       "UNION",
+	TOKEN_INTERSECT:   "INTERSECT",
+	TOKEN_EXCEPT:      "EXCEPT",
+	TOKEN_GROUP:       "GROUP",
+	TOKEN_BY:          "BY",
+	TOKEN_ORDER:       "ORDER",
+	TOKEN_HAVING:      "HAVING",
+	TOKEN_LIMIT:       "LIMIT",
+	TOKEN_OFFSET:      "OFFSET",
+	TOKEN_DISTINCT:    "DISTINCT",
+	TOKEN_ALL:         "ALL",
+	TOKEN_AND:         "AND",
+	TOKEN_OR:          "OR",
+	TOKEN_NOT:         "NOT",
+	TOKEN_NULL:        "NULL",
+	TOKEN_IS:          "IS",
+	TOKEN_IN:          "IN",
+	TOKEN_EXISTS:      "EXISTS",
+	TOKEN_BETWEEN:     "BETWEEN",
+	TOKEN_LIKE:        "LIKE",
+	TOKEN_ILIKE:       "ILIKE",
+	TOKEN_SIMILAR:     "SIMILAR",
+	TOKEN_CASE:        "CASE",
+	TOKEN_WHEN:        "WHEN",
+	TOKEN_THEN:        "THEN",
+	TOKEN_ELSE:        "ELSE",
+	TOKEN_CAST:        "CAST",
+	TOKEN_EXTRACT:     "EXTRACT",
+	TOKEN_SUBSTRING:   "SUBSTRING",
+	TOKEN_POSITION:    "POSITION",
+	TOKEN_OVERLAY:     "OVERLAY",
+	TOKEN_TRIM:        "TRIM",
+	TOKEN_COALESCE:    "COALESCE",
+	TOKEN_NULLIF:      "NULLIF",
+	TOKEN_GREATEST:    "GREATEST",
+	TOKEN_LEAST:       "LEAST",
+	TOKEN_TRUE:        "TRUE",
+	TOKEN_FALSE:       "FALSE",
+}
+
 // Keywords mapping - case insensitive
 var keywords = map[string]TokenType{
 	"SELECT":      TOKEN_SELECT,
@@ -265,4 +341,419 @@ func (s *Scanner) readChar() {
 		s.position += size
 		s.location++
 	}
+}
+
+func (s *Scanner) peekChar() rune {
+	return s.peek
+}
+
+func (s *Scanner) skipWhitespace() {
+	for unicode.IsSpace(s.current) {
+		s.readChar()
+	}
+}
+
+// This scan an identifier or keyword
+func (s *Scanner) scanIdentifier() Token {
+	start := s.location - 1
+
+	var builder strings.Builder
+
+	builder.WriteRune(s.current)
+	s.readChar()
+
+	//Subsequent characters (letter ,digits, underscore)
+	for unicode.IsLetter(s.current) || unicode.IsDigit(s.current) || s.current == '_' {
+		builder.WriteRune(s.current)
+		s.readChar()
+	}
+	value := builder.String()
+
+	if tokenType, isKeyword := keywords[strings.ToUpper(value)]; isKeyword {
+		return Token{
+			Type:     tokenType,
+			Value:    strings.ToUpper(value),
+			Location: start,
+		}
+	}
+
+	return Token{
+		Type:     TOKEN_IDENT,
+		Value:    value,
+		Location: start,
+	}
+
+}
+
+func (s *Scanner) scanQuotedIdentifier() Token {
+	start := s.location - 1
+	var builder strings.Builder
+
+	s.readChar()
+
+	for s.current != '"' && s.current != 0 {
+		if s.current == '"' && s.peekChar() == '"' {
+			builder.WriteRune('"')
+			s.readChar() //Skip first quote
+			s.readChar() //Skip second quote
+		} else {
+			builder.WriteRune(s.current)
+			s.readChar()
+		}
+	}
+
+	if s.current == '"' {
+		s.readChar() //Skip closing quote
+	}
+
+	return Token{
+		Type:     TOKEN_IDENT,
+		Value:    builder.String(),
+		Location: start,
+	}
+}
+
+func (s *Scanner) scanNumber() Token {
+	start := s.location - 1
+	var builder strings.Builder
+
+	isFloat := false
+
+	for unicode.IsDigit(s.current) {
+		builder.WriteRune(s.current)
+		s.readChar()
+	}
+
+	if s.current == '.' && unicode.IsDigit(s.peekChar()) {
+		isFloat = true
+		builder.WriteRune(s.current)
+		s.readChar()
+
+		for unicode.IsDigit(s.current) {
+			builder.WriteRune(s.current)
+			s.readChar()
+		}
+	}
+
+	//Exponent part
+	if s.current == 'e' || s.current == 'E' {
+		isFloat = true
+		builder.WriteRune(s.current)
+		s.readChar()
+
+		if s.current == '+' || s.current == '-' {
+			builder.WriteRune(s.current)
+			s.readChar()
+		}
+
+		for unicode.IsDigit(s.current) {
+			builder.WriteRune(s.current)
+			s.readChar()
+		}
+	}
+
+	value := builder.String()
+
+	if isFloat {
+		floatVal, err := strconv.ParseFloat(value, 64)
+		if err != nil {
+			return Token{Type: TOKEN_ERROR, Value: "Invalid float: " + value, Location: start}
+		}
+
+		return Token{
+			Type:     TOKEN_FCONST,
+			Value:    value,
+			FloatVal: floatVal,
+			Location: start,
+		}
+	}
+
+	intVal, err := strconv.ParseInt(value, 10, 60)
+	if err != nil {
+		return Token{
+			Type:     TOKEN_ERROR,
+			Value:    "Invalid integer: " + value,
+			Location: start,
+		}
+	}
+
+	return Token{
+		Type:     TOKEN_ICONST,
+		Value:    value,
+		IntVal:   intVal,
+		Location: start,
+	}
+}
+
+func (s *Scanner) scanString(quote rune) Token {
+	start := s.location - 1
+	var builder strings.Builder
+	s.readChar()
+
+	for s.current != quote && s.current != 0 {
+		if s.current == quote && s.peekChar() == quote {
+			builder.WriteRune(s.current)
+			s.readChar() //Skip first quote
+			s.readChar() //Skip second quote
+		} else if s.current == '\\' {
+			s.readChar()
+			switch s.current {
+			case 'n':
+				builder.WriteRune('\n')
+			case 't':
+				builder.WriteRune('\t')
+			case 'r':
+				builder.WriteRune('\r')
+			case '\\':
+				builder.WriteRune('\\')
+			case '\'':
+				builder.WriteRune('\'')
+			case '"':
+				builder.WriteRune('"')
+			default:
+				builder.WriteRune(s.current)
+			}
+			s.readChar()
+		} else {
+			builder.WriteRune(s.current)
+			s.readChar()
+		}
+	}
+	if s.current == quote {
+		s.readChar() //Skip closing quote
+	}
+
+	return Token{
+		Type:     TOKEN_SCONST,
+		Value:    builder.String(),
+		Location: start,
+	}
+}
+
+// scanParameter scans a paramater marker ($1, $2, etc)
+func (s *Scanner) scanParameter() Token {
+	start := s.location - 1
+	var builder strings.Builder
+
+	builder.WriteRune(s.current)
+	s.readChar()
+
+	if !unicode.IsDigit(s.current) {
+		return Token{Type: TOKEN_ERROR, Value: "Invalid parameter", Location: start}
+	}
+
+	for unicode.IsDigit(s.current) {
+		builder.WriteRune(s.current)
+		s.readChar()
+	}
+
+	return Token{
+		Type:     TOKEN_PARAM,
+		Value:    builder.String(),
+		Location: start,
+	}
+}
+
+// scanComment scans a comment and returns the next token
+func (s *Scanner) scanComment() Token {
+	if s.current == '-' && s.peekChar() == '-' {
+		// Line comment
+		for s.current != '\n' && s.current != 0 {
+			s.readChar()
+		}
+	} else if s.current == '/' && s.peekChar() == '*' {
+		// Block comment
+		s.readChar() // skip '/'
+		s.readChar() // skip '*'
+
+		for {
+			if s.current == 0 {
+				break
+			}
+			if s.current == '*' && s.peekChar() == '/' {
+				s.readChar() // skip '*'
+				s.readChar() // skip '/'
+				break
+			}
+			s.readChar()
+		}
+	}
+
+	// Return next token after comment
+	return s.NextToken()
+}
+
+// NextToken returns the next token from the input
+func (s *Scanner) NextToken() Token {
+	s.skipWhitespace()
+
+	if s.current == 0 {
+		return Token{Type: TOKEN_EOF, Location: s.location}
+	}
+	location := s.location - 1
+
+	switch {
+	case unicode.IsLetter(s.current) || s.current == '_':
+		return s.scanIdentifier()
+
+	case s.current == '"':
+		return s.scanQuotedIdentifier()
+
+	case unicode.IsDigit(s.current):
+		return s.scanNumber()
+
+	case s.current == '\'' || s.current == '"':
+		return s.scanString(s.current)
+
+	case s.current == '$':
+		return s.scanParameter()
+
+	case s.current == '-' && s.peekChar() == '-':
+		return s.scanComment()
+
+	case s.current == '/' && s.peekChar() == '*':
+		return s.scanComment()
+
+	// Two-character operators
+	case s.current == '<':
+		s.readChar()
+		if s.current == '=' {
+			s.readChar()
+			return Token{Type: TOKEN_LE, Value: "<=", Location: location}
+		} else if s.current == '>' {
+			s.readChar()
+			return Token{Type: TOKEN_NE, Value: "<>", Location: location}
+		}
+		return Token{Type: TOKEN_LT, Value: "<", Location: location}
+
+	case s.current == '>':
+		s.readChar()
+		if s.current == '=' {
+			s.readChar()
+			return Token{Type: TOKEN_GE, Value: ">=", Location: location}
+		}
+		return Token{Type: TOKEN_GT, Value: ">", Location: location}
+
+	case s.current == '!':
+		s.readChar()
+		if s.current == '=' {
+			s.readChar()
+			return Token{Type: TOKEN_NE, Value: "!=", Location: location}
+		}
+		return Token{Type: TOKEN_ERROR, Value: "unexpected character: !", Location: location}
+
+	case s.current == '|':
+		s.readChar()
+		if s.current == '|' {
+			s.readChar()
+			return Token{Type: TOKEN_CONCAT, Value: "||", Location: location}
+		}
+		return Token{Type: TOKEN_ERROR, Value: "unexpected character: |", Location: location}
+
+	case s.current == ':':
+		s.readChar()
+		if s.current == '=' {
+			s.readChar()
+			return Token{Type: TOKEN_ASSIGN, Value: ":=", Location: location}
+		}
+		return Token{Type: TOKEN_ERROR, Value: "unexpected character: :", Location: location}
+
+	case s.current == '.':
+		s.readChar()
+		if s.current == '.' {
+			s.readChar()
+			return Token{Type: TOKEN_DOTDOT, Value: "..", Location: location}
+		}
+		return Token{Type: TOKEN_DOT, Value: ".", Location: location}
+
+	// Single-character tokens
+	case s.current == '=':
+		s.readChar()
+		return Token{Type: TOKEN_EQ, Value: "=", Location: location}
+
+	case s.current == '+':
+		s.readChar()
+		return Token{Type: TOKEN_PLUS, Value: "+", Location: location}
+
+	case s.current == '-':
+		s.readChar()
+		return Token{Type: TOKEN_MINUS, Value: "-", Location: location}
+
+	case s.current == '*':
+		s.readChar()
+		return Token{Type: TOKEN_MULTIPLY, Value: "*", Location: location}
+
+	case s.current == '/':
+		s.readChar()
+		return Token{Type: TOKEN_DIVIDE, Value: "/", Location: location}
+
+	case s.current == '%':
+		s.readChar()
+		return Token{Type: TOKEN_MODULO, Value: "%", Location: location}
+
+	case s.current == '^':
+		s.readChar()
+		return Token{Type: TOKEN_POWER, Value: "^", Location: location}
+
+	case s.current == '(':
+		s.readChar()
+		return Token{Type: TOKEN_LPAREN, Value: "(", Location: location}
+
+	case s.current == ')':
+		s.readChar()
+		return Token{Type: TOKEN_RPAREN, Value: ")", Location: location}
+
+	case s.current == ',':
+		s.readChar()
+		return Token{Type: TOKEN_COMMA, Value: ",", Location: location}
+
+	case s.current == ';':
+		s.readChar()
+		return Token{Type: TOKEN_SEMICOLON, Value: ";", Location: location}
+
+	case s.current == '[':
+		s.readChar()
+		return Token{Type: TOKEN_LBRACKET, Value: "[", Location: location}
+
+	case s.current == ']':
+		s.readChar()
+		return Token{Type: TOKEN_RBRACKET, Value: "]", Location: location}
+
+	case s.current == '{':
+		s.readChar()
+		return Token{Type: TOKEN_LBRACE, Value: "{", Location: location}
+
+	case s.current == '}':
+		s.readChar()
+		return Token{Type: TOKEN_RBRACE, Value: "}", Location: location}
+
+	default:
+		char := s.current
+		s.readChar()
+		return Token{
+			Type:     TOKEN_ERROR,
+			Value:    fmt.Sprintf("unexpected character: %c", char),
+			Location: location,
+		}
+	}
+}
+
+// SetState sets the scanner state for different parsing modes
+func (s *Scanner) SetState(state ScannerState) {
+	s.state = state
+}
+
+// GetTokens tokenizes the entire input and returns all tokens
+func (s *Scanner) GetTokens() []Token {
+	var tokens []Token
+
+	for {
+		token := s.NextToken()
+		tokens = append(tokens, token)
+		if token.Type == TOKEN_EOF || token.Type == TOKEN_ERROR {
+			break
+		}
+	}
+
+	return tokens
 }

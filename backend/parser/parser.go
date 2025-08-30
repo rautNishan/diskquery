@@ -15,5 +15,9 @@ const (
 
 func RawParse(query string, parseMode RawParseMode) {
 	scanner := NewScanner(query, 0)
-	fmt.Printf("Scanner: %+v\n", scanner)
+	tokens := scanner.GetTokens()
+	for _, token := range tokens {
+		fmt.Printf("Token raw type: %d\n", token.Type)
+		fmt.Printf("TokeyType: %s, Value: %s\n", keywordsReverse[token.Type], token.Value)
+	}
 }
